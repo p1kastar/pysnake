@@ -20,103 +20,130 @@ RED = (255, 0, 0)
 # FPS
 clock = pygame.time.Clock()
 
-# Функция отрисовки змейки
-def draw_snake(snake_body):
-    for block in snake_body:
-        pygame.draw.rect(WINDOW, GREEN, pygame.Rect(block[0], block[1], CELL_SIZE, CELL_SIZE))
+# Направления
+DIRECTIONS = {
+    "UP": (0, -1),
+    "DOWN": (0, 1),
+    "LEFT": (-1, 0),
+    "RIGHT": (1, 0)
+}
 
-# Функция сообщения о конце игры
-def message(text, color, position):
-    font = pygame.font.SysFont("comicsansms", 25)
+# Функция отрисовки текста
+def draw_text(text, color, position, size=25):
+    font = pygame.font.SysFont("comicsansms", size)
     msg = font.render(text, True, color)
     WINDOW.blit(msg, position)
 
+# Меню выбора
+def menu():
+    running = True
+    selected_speed = 10
+    mode_through_walls = False
+
+    while running:
+        WINDOW.fill(BLACK)
+        draw_text("Змейка", GREEN, (WIDTH // 2 - 50, 50), 40)
+        draw_text("1. Начать игру", WHITE, (WIDTH // 2 - 100, 120))
+        draw_text(f"2. Скорость: {selected_speed}", WHITE, (WIDTH // 2 - 100, 160))
+        draw_text(f"3. Режим: {'Через стены' if mode_through_walls else 'Обычный'}", WHITE, (WIDTH // 2 - 100, 200))
+        draw_text("4. Выход", WHITE, (WIDTH // 2 - 100, 240))
+        pygame.display.update()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_1:
+                    return selected_speed, mode_through_walls
+                elif event.key == pygame.K_2:
+                    selected_speed = selected_speed + 5 if selected_speed < 20 else 5
+                elif event.key == pygame.K_3:
+                    mode_through_walls = not mode_through_walls
+                elif event.key == pygame.K_4:
+                    pygame.quit()
+                    quit()
+
 # Основная игра
-def game():
+def game(speed, through_walls):
     # Координаты змейки
     snake_body = [[100, 100], [80, 100], [60, 100]]
     snake_direction = "RIGHT"
     change_to = snake_direction
 
     # Еда
-    food_pos = [random.randrange(1, (WIDTH//CELL_SIZE)) * CELL_SIZE, 
-                random.randrange(1, (HEIGHT//CELL_SIZE)) * CELL_SIZE]
-    food_spawn = True
+    food_pos = [random.randrange(1, (WIDTH // CELL_SIZE)) * CELL_SIZE, 
+                random.randrange(1, (HEIGHT // CELL_SIZE)) * CELL_SIZE]
 
     # Счёт
     score = 0
 
-    while True:
+    running = True
+    while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 quit()
 
-            # Управление змейкой
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_UP and not snake_direction == "DOWN":
+                if event.key == pygame.K_UP and snake_direction != "DOWN":
                     change_to = "UP"
-                if event.key == pygame.K_DOWN and not snake_direction == "UP":
+                elif event.key == pygame.K_DOWN and snake_direction != "UP":
                     change_to = "DOWN"
-                if event.key == pygame.K_LEFT and not snake_direction == "RIGHT":
+                elif event.key == pygame.K_LEFT and snake_direction != "RIGHT":
                     change_to = "LEFT"
-                if event.key == pygame.K_RIGHT and not snake_direction == "LEFT":
+                elif event.key == pygame.K_RIGHT and snake_direction != "LEFT":
                     change_to = "RIGHT"
 
         # Меняем направление
         snake_direction = change_to
+        dx, dy = DIRECTIONS[snake_direction]
 
         # Обновляем координаты змейки
-        if snake_direction == "UP":
-            snake_body.insert(0, [snake_body[0][0], snake_body[0][1] - CELL_SIZE])
-        if snake_direction == "DOWN":
-            snake_body.insert(0, [snake_body[0][0], snake_body[0][1] + CELL_SIZE])
-        if snake_direction == "LEFT":
-            snake_body.insert(0, [snake_body[0][0] - CELL_SIZE, snake_body[0][1]])
-        if snake_direction == "RIGHT":
-            snake_body.insert(0, [snake_body[0][0] + CELL_SIZE, snake_body[0][1]])
+        new_head = [snake_body[0][0] + dx * CELL_SIZE, snake_body[0][1] + dy * CELL_SIZE]
+
+        if through_walls:
+            new_head[0] %= WIDTH
+            new_head[1] %= HEIGHT
+        else:
+            if new_head[0] < 0 or new_head[0] >= WIDTH or new_head[1] < 0 or new_head[1] >= HEIGHT:
+                running = False
+
+        snake_body.insert(0, new_head)
 
         # Проверяем, съела ли змейка еду
         if snake_body[0] == food_pos:
-            food_spawn = False
             score += 1
+            food_pos = [random.randrange(1, (WIDTH // CELL_SIZE)) * CELL_SIZE, 
+                        random.randrange(1, (HEIGHT // CELL_SIZE)) * CELL_SIZE]
         else:
             snake_body.pop()
 
-        if not food_spawn:
-            food_pos = [random.randrange(1, (WIDTH//CELL_SIZE)) * CELL_SIZE,
-                        random.randrange(1, (HEIGHT//CELL_SIZE)) * CELL_SIZE]
-        food_spawn = True
-
-        # Проверка на столкновения с границами или собой
-        if (snake_body[0][0] < 0 or snake_body[0][0] >= WIDTH or 
-            snake_body[0][1] < 0 or snake_body[0][1] >= HEIGHT):
-            break
-
-        for block in snake_body[1:]:
-            if snake_body[0] == block:
-                break
+        # Проверка на столкновения с собой
+        if not through_walls and snake_body[0] in snake_body[1:]:
+            running = False
 
         # Рисуем всё
         WINDOW.fill(BLACK)
-        draw_snake(snake_body)
+        for block in snake_body:
+            pygame.draw.rect(WINDOW, GREEN, pygame.Rect(block[0], block[1], CELL_SIZE, CELL_SIZE))
         pygame.draw.rect(WINDOW, RED, pygame.Rect(food_pos[0], food_pos[1], CELL_SIZE, CELL_SIZE))
-
-        # Вывод счёта
-        message(f"Score: {score}", WHITE, (10, 10))
+        draw_text(f"Score: {score}", WHITE, (10, 10))
 
         pygame.display.update()
-        clock.tick(10)  # Скорость змейки
+        clock.tick(speed)
 
     # Конец игры
-    time.sleep(1)
     WINDOW.fill(BLACK)
-    message("Game Over", RED, (WIDTH//2 - 80, HEIGHT//2 - 20))
-    message(f"Your Score: {score}", WHITE, (WIDTH//2 - 90, HEIGHT//2 + 20))
+    draw_text("Game Over", RED, (WIDTH // 2 - 80, HEIGHT // 2 - 20))
+    draw_text(f"Your Score: {score}", WHITE, (WIDTH // 2 - 90, HEIGHT // 2 + 20))
     pygame.display.update()
     time.sleep(3)
 
 # Запуск игры
 if __name__ == "__main__":
-    game()
+    while True:
+        speed, through_walls = menu()
+        game(speed, through_walls)
 
