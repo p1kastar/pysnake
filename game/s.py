@@ -16,6 +16,7 @@ WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
+GREY = (30, 30, 30)
 
 # FPS
 clock = pygame.time.Clock()
@@ -66,7 +67,7 @@ def menu():
                     quit()
 
 # Основная игра
-def game(speed, through_walls):
+def game(base_speed, through_walls):
     # Координаты змейки
     snake_body = [[100, 100], [80, 100], [60, 100]]
     snake_direction = "RIGHT"
@@ -78,6 +79,7 @@ def game(speed, through_walls):
 
     # Счёт
     score = 0
+    current_speed = base_speed
 
     running = True
     while running:
@@ -117,6 +119,7 @@ def game(speed, through_walls):
             score += 1
             food_pos = [random.randrange(1, (WIDTH // CELL_SIZE)) * CELL_SIZE, 
                         random.randrange(1, (HEIGHT // CELL_SIZE)) * CELL_SIZE]
+            current_speed += 1  # Увеличиваем скорость
         else:
             snake_body.pop()
 
@@ -128,11 +131,13 @@ def game(speed, through_walls):
         WINDOW.fill(BLACK)
         for block in snake_body:
             pygame.draw.rect(WINDOW, GREEN, pygame.Rect(block[0], block[1], CELL_SIZE, CELL_SIZE))
+            pygame.draw.rect(WINDOW, GREY, pygame.Rect(block[0], block[1], CELL_SIZE, CELL_SIZE), 1)  # Добавление чёрных полос
+
         pygame.draw.rect(WINDOW, RED, pygame.Rect(food_pos[0], food_pos[1], CELL_SIZE, CELL_SIZE))
         draw_text(f"Score: {score}", WHITE, (10, 10))
 
         pygame.display.update()
-        clock.tick(speed)
+        clock.tick(current_speed)
 
     # Конец игры
     WINDOW.fill(BLACK)
@@ -144,6 +149,6 @@ def game(speed, through_walls):
 # Запуск игры
 if __name__ == "__main__":
     while True:
-        speed, through_walls = menu()
-        game(speed, through_walls)
+        base_speed, through_walls = menu()
+        game(base_speed, through_walls)
 
